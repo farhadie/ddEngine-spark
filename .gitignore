@@ -80,4 +80,8 @@ project/plugins/project/
 *.class
 *.log
 
+### Spark ###
+metastore_db
+spark-warehouse
+
 # End of https://www.gitignore.io/api/sbt,scala,intellij
