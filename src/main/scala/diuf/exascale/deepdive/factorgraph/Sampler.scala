@@ -4,7 +4,7 @@ package diuf.exascale.deepdive.factorgraph
 /**
   * Created by sam on 8/3/17.
   */
-import org.apache.spark.sql.{Dataset, RelationalGroupedDataset}
+import org.apache.spark.sql.{Dataset}
 object Sampler {
   def random_assignment(variables: Dataset[Variable]): Dataset[VariableAssignment] = {
     variables.map {
@@ -17,8 +17,8 @@ object Sampler {
       }
     }.toDF("variable_id", "value").as[VariableAssignment] //maybe no need for this case class?
   }
-  def sample(factors:Array[(Long,Short,Double,Long)], variables:Array[(Long,Boolean,Double)]):Double = {
-    var new_value = 0
+  def sample(factors:Array[(Long,Short,Double,Long,Array[(Long, Boolean)])], variables:Array[(Long,Boolean,Double)]):Double = {
+    var new_value = 0.0
     new_value
   }
   def gibbs(Q:Dataset[QGroup], iterations:Long):Unit = {

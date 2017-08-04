@@ -78,9 +78,9 @@ case class Factor(id: Long, var weight_id: Long, func: Short, edge_count: Long, 
     result.toInt
   }
 }
-case class Edge(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long) extends Serializable {}
+case class Edge(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, factor_variables: Array[(Long, Boolean)]) extends Serializable {}
 case class VariableAssignment(variable_id:Long, value:Double)
-case class VQ(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, variable2_id: Long, variable2_isEvidence:Boolean, variable2_initial_value:Double)
-case class FQ(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, value:Double)
-case class Q(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, variable2_id: Long, variable2_isEvidence:Boolean, variable2_initial_value:Double, value:Double)
-case class QGroup(variable_id: Long, factors:Array[(Long,Short,Double,Long)], variables:Array[(Long,Boolean,Double)])
+case class VQ(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, factor_variables: Array[(Long, Boolean)], variable2_id: Long, variable2_isEvidence:Boolean, variable2_initial_value:Double)
+case class FQ(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, factor_variables: Array[(Long, Boolean)], value:Double)
+case class Q(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, factor_variables: Array[(Long, Boolean)], variable2_id: Long, variable2_isEvidence:Boolean, variable2_initial_value:Double, value:Double)
+case class QGroup(variable_id: Long, factors:Array[(Long,Short,Double,Long,Array[(Long, Boolean)])], variables:Array[(Long,Boolean,Double)])

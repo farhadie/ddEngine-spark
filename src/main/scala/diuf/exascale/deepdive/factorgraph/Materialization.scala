@@ -7,7 +7,7 @@ package diuf.exascale.deepdive.factorgraph
 
 import diuf.exascale.deepdive.factorgraph.Engine.spark
 import org.apache.spark.sql.{Dataset, Row}
-import org.apache.spark.sql.functions.monotonically_increasing_id
+import org.apache.spark.sql.functions.{collect_set, monotonically_increasing_id, struct}
 
 object Materialization {
   import Engine.spark.implicits._
@@ -41,36 +41,40 @@ object Materialization {
     }
   }
   def clean_edges(factors: Dataset[Factor], variables: Dataset[Variable]): Dataset[Edge] = {
-    val raw_edges: Dataset[(Long, Long, Short,Double,Long)] = factors.flatMap {
+    val raw_edges: Dataset[(Long, Long, Short,Double,Long, Array[(Long, Boolean)])] = factors.flatMap {
       f => {
         f.variables.map {
-          v => (v._1, f.id, f.func, f.weight,f.weight_id)
+          v => (v._1, f.id, f.func, f.weight,f.weight_id, f.variables)
         }
       }
     }
       raw_edges.join(variables, raw_edges("_1") === variables("id")).select(variables("id").cast("Long").as("variable_id"),
         variables("isEvidence").as("isEvidence"),variables("variable_initial_value").as("variable_initial_value"),
         raw_edges("_2").as("factor_id"), raw_edges("_3").as("func"), raw_edges("_4").as("weight"),
-        raw_edges("_5").as("weight_id")).as[Edge]
+        raw_edges("_5").as("weight_id"), raw_edges("_6").as("factor_variables")).as[Edge]
   }
   // variable-side co-clustering
   def vcc(E: Dataset[Edge]):Dataset[VQ] = {
     E.as("E1").join(E.as("E2"), $"E1.factor_id" === $"E2.factor_id").where($"E1.variable_id" =!= $"E2.variable_id")
       .select("E1.*","E2.variable_id","E2.isEvidence","E2.variable_initial_value")
-      .toDF("variable_id", "isEvidence", "variable_initial_value", "factor_id", "func", "weight", "weight_id", "variable2_id",
+      .toDF("variable_id", "isEvidence", "variable_initial_value", "factor_id", "func", "weight", "weight_id", "factor_variables", "variable2_id",
         "variable2_isEvidence", "variable2_initial_value").as[VQ].cache() //TODO performance
   }
   // factor-side co-clustering
   def fcc(E: Dataset[Edge], A:Dataset[VariableAssignment]):Dataset[FQ] = {
     E.as("E").join(A.as("A")).where($"E.variable_id" === $"A.variable_id").select("E.*", "A.value")
-      .toDF("variable_id", "isEvidence", "variable_initial_value", "factor_id", "func", "weight", "weight_id", "value")
+      .toDF("variable_id", "isEvidence", "variable_initial_value", "factor_id", "func", "weight", "weight_id", "factor_variables", "value")
       .as[FQ].cache
 
   }
   // Q
   def compute_q(vcc:Dataset[VQ],A:Dataset[VariableAssignment]):Dataset[Q] = {
     vcc.as("VQ").join(A.as("A"), $"VQ.variable2_id" === $"A.variable_id").select("VQ.*", "A.value").
-      toDF("variable_id", "isEvidence", "variable_initial_value", "factor_id", "func", "weight", "weight_id", "variable2_id",
+      toDF("variable_id", "isEvidence", "variable_initial_value", "factor_id", "func", "weight", "weight_id", "factor_variables", "variable2_id",
         "variable2_isEvidence", "variable2_initial_value", "value").as[Q].cache
+  }
+  def compute_QGrouped(q:Dataset[Q]):Dataset[QGroup]= {
+    q.groupBy("variable_id").agg(collect_set(struct("factor_id","func","weight","weight_id","factor_variables")).as("factors")
+      ,collect_set(struct("variable2_id", "variable2_isEvidence", "value")).as("variables")).as[QGroup]
   }
 }

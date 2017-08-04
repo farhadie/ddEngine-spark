@@ -28,8 +28,7 @@ object Engine {
     val A: Dataset[VariableAssignment]  = Sampler.random_assignment(variables)
     if(materialization_stat(factors, variables)){
       val q = compute_q(vcc(E),A)
-      val q_grouped = q.groupBy("variable_id").agg(collect_set(struct("factor_id","func","weight","weight_id")).as("factors")
-        ,collect_set(struct("variable2_id", "variable2_isEvidence", "value")).as("variables")).as[QGroup]
+      val q_grouped = compute_QGrouped(q)
       Sampler.gibbs(q_grouped, 10)
     }else {
       fcc(E, A)
