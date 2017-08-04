@@ -4,10 +4,10 @@ package diuf.exascale.deepdive.factorgraph
   * Created by sam on 7/15/17.
   */
 
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import Inference._
-import Grounding._
-import org.apache.spark.rdd.RDD
+import Materialization._
+import org.apache.spark.sql.functions._
 
 object Engine {
   val spark: SparkSession = SparkSession
@@ -20,12 +20,27 @@ object Engine {
   def main(args: Array[String]): Unit = {
 
     //    inputs
-    val hadoop_dir = args(0)
-    val weights: RDD[Weight] = clean_weights(hadoop_dir)
-    val variables: RDD[Variable] = clean_variables(hadoop_dir)
-    val factors: RDD[Factor] = clean_factors(hadoop_dir)
-    val graph = Graph(variables, factors, weights)
-
-    gibbs_sampler(graph,args(1).toInt,2,2)
+    val hadoop_dir = "home/sam/thesis/gibbs/smoke/2v"//args(0)
+    val weights: Dataset[Weight] = clean_weights(hadoop_dir)
+    val variables: Dataset[Variable] = clean_variables(hadoop_dir)
+    val factors: Dataset[Factor] = clean_factors(hadoop_dir)
+    val E: Dataset[Edge]= clean_edges(factors, variables)
+    val A: Dataset[VariableAssignment]  = Sampler.random_assignment(variables)
+    if(materialization_stat(factors, variables)){
+      val q = compute_q(vcc(E),A)
+      val q_grouped = q.groupBy("variable_id").agg(collect_set(struct("factor_id","func","weight","weight_id")).as("factors")
+        ,collect_set(struct("variable2_id", "variable2_isEvidence", "value")).as("variables")).as[QGroup]
+      Sampler.gibbs(q_grouped, 10)
+    }else {
+      fcc(E, A)
+    }
   } //-- main
+
+  def materialization_stat(factors: Dataset[Factor], variable: Dataset[Variable]): Boolean={
+    true //variables are way less than factors
+//    if(factors.count() > variable.count() * 2)
+//      true // QV
+//    else
+//      false //QF
+  } //-- choose between V-CoC or F-COC
 }

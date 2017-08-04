@@ -1,15 +1,14 @@
 package diuf.exascale.deepdive.factorgraph
 
-import org.apache.spark.rdd.RDD
+
 
 /**
   * Created by Ehsan.
   */
-class VertexProperty() extends Serializable
-case class Weight(id: Long, weight:Double, isFixed:Boolean) extends Serializable
-case class Variable(id: Long, isEvidence: Boolean, var value: Double, data_type: Short, cardinality: Long) extends VertexProperty {
+case class Weight(id: Long, isFixed:Boolean, weight:Double) extends Serializable
+case class Variable(id: Long, isEvidence: Boolean, var variable_initial_value: Double, data_type: Short, cardinality: Long) extends Serializable {
   def get_value(): Double = {
-    value
+    variable_initial_value
   }
   def canEqual(a: Any): Boolean = a.isInstanceOf[Variable]
 
@@ -22,12 +21,12 @@ case class Variable(id: Long, isEvidence: Boolean, var value: Double, data_type:
   override def hashCode: Int = {
     val prime: Double = 31
     var result: Double = 1
-    result = prime * result + value
+    result = prime * result + variable_initial_value
     result = prime * result + isEvidence.hashCode
     result.toInt
   }
 }
-case class Factor(id: Long, var weight_id: Long, func: Short, edge_count: Long, variables: Array[(Long, Boolean)], var weight: Double) extends VertexProperty {
+case class Factor(id: Long, var weight_id: Long, func: Short, edge_count: Long, variables: Array[(Long, Boolean)], var weight: Double) extends Serializable {
   def call(methodName: String, args: AnyRef*): AnyRef = {
     def argtypes = args.map(_.getClass)
 
@@ -79,24 +78,9 @@ case class Factor(id: Long, var weight_id: Long, func: Short, edge_count: Long, 
     result.toInt
   }
 }
-case class MarkovBlanket(id:Long, factors: Array[Factor], variables: Array[Variable])
-case class Graph(variables: RDD[Variable], factors: RDD[Factor], weight: RDD[Weight]){
-  def markov_blanket(): RDD[(Long, Iterable[Long])] = {
-    val edges = factors.flatMap{
-      r => r.variables.map(v => (r.id, v._1))
-    }.groupBy(_._2).map{
-      r => (r._1, r._2.map(_._1))
-    }
-
-    // variables connected to each other
-    //    val super_edges = factors.flatMap{
-    //      r => r.variables.toSet.subsets(2).toList
-    //    }.flatMap{
-    //      r => {
-    //        val row = r.toArray
-    //        Array((row(0)._1, row(1)._1), (row(1)._1, row(0)._1))
-    //      }
-    //    }.distinct.groupBy(_._1)
-    edges
-  }
-}
+case class Edge(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long) extends Serializable {}
+case class VariableAssignment(variable_id:Long, value:Double)
+case class VQ(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, variable2_id: Long, variable2_isEvidence:Boolean, variable2_initial_value:Double)
+case class FQ(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, value:Double)
+case class Q(variable_id: Long, isEvidence:Boolean, variable_initial_value:Double, factor_id: Long, func:Short, weight:Double, weight_id:Long, variable2_id: Long, variable2_isEvidence:Boolean, variable2_initial_value:Double, value:Double)
+case class QGroup(variable_id: Long, factors:Array[(Long,Short,Double,Long)], variables:Array[(Long,Boolean,Double)])
