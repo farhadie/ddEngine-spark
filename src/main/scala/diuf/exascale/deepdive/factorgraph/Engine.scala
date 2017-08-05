@@ -20,7 +20,7 @@ object Engine {
   def main(args: Array[String]): Unit = {
 
     //    inputs
-    val hadoop_dir = "home/sam/thesis/gibbs/smoke/2v"//args(0)
+    val hadoop_dir = args(0)
     val weights: Dataset[Weight] = clean_weights(hadoop_dir)
     val variables: Dataset[Variable] = clean_variables(hadoop_dir)
     val factors: Dataset[Factor] = clean_factors(hadoop_dir)

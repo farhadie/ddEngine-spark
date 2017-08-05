@@ -6,7 +6,7 @@ package diuf.exascale.deepdive.factorgraph
   */
 
 import diuf.exascale.deepdive.factorgraph.Engine.spark
-import org.apache.spark.sql.{Dataset, Row}
+import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.functions.{collect_set, monotonically_increasing_id, struct}
 
 object Materialization {
@@ -55,7 +55,7 @@ object Materialization {
   }
   // variable-side co-clustering
   def vcc(E: Dataset[Edge]):Dataset[VQ] = {
-    E.as("E1").join(E.as("E2"), $"E1.factor_id" === $"E2.factor_id").where($"E1.variable_id" =!= $"E2.variable_id")
+    E.as("E1").join(E.as("E2"), $"E1.factor_id" === $"E2.factor_id")//.where($"E1.variable_id" =!= $"E2.variable_id")
       .select("E1.*","E2.variable_id","E2.isEvidence","E2.variable_initial_value")
       .toDF("variable_id", "isEvidence", "variable_initial_value", "factor_id", "func", "weight", "weight_id", "factor_variables", "variable2_id",
         "variable2_isEvidence", "variable2_initial_value").as[VQ].cache() //TODO performance
