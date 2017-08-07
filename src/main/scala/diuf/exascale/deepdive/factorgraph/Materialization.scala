@@ -36,7 +36,7 @@ object Materialization {
         for (i <- str.indices by 2) {
           array = array :+ (str(i).toLong, str(i + 1).toBoolean)
         }
-        Factor(r.getLong(s), r.getInt(0), r.getInt(1).toShort, r.getInt(3), array, 0.0)
+        Factor(r.getLong(s), r.getInt(0), r.getInt(1).toShort, r.getInt(3), array, 0.5)
       }
     }
   }

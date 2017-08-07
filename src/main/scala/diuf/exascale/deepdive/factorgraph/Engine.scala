@@ -4,10 +4,9 @@ package diuf.exascale.deepdive.factorgraph
   * Created by sam on 7/15/17.
   */
 
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.{Dataset, SparkSession}
 import Inference._
 import Materialization._
-import org.apache.spark.sql.functions._
 
 object Engine {
   val spark: SparkSession = SparkSession
@@ -18,21 +17,20 @@ object Engine {
 
 
   def main(args: Array[String]): Unit = {
-
+    val t0 = System.nanoTime()
     //    inputs
     val hadoop_dir = args(0)
     val weights: Dataset[Weight] = clean_weights(hadoop_dir)
     val variables: Dataset[Variable] = clean_variables(hadoop_dir)
     val factors: Dataset[Factor] = clean_factors(hadoop_dir)
     val E: Dataset[Edge]= clean_edges(factors, variables)
-    val A: Dataset[VariableAssignment]  = Sampler.random_assignment(variables)
+    val A: Dataset[VariableAssignment]  = Sampler.random_assignment(variables).cache()
     if(materialization_stat(factors, variables)){
-      val q = compute_q(vcc(E),A)
-      val q_grouped = compute_QGrouped(q)
-      Sampler.gibbs(q_grouped, 10)
+      Sampler.gibbs(vcc(E),A, args(1).toInt)
     }else {
-      fcc(E, A)
     }
+  val t1 = System.nanoTime()
+  println("Elapsed time: " + (t1 - t0) + "ns")
   } //-- main
 
   def materialization_stat(factors: Dataset[Factor], variable: Dataset[Variable]): Boolean={
