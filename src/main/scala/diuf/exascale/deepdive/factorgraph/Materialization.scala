@@ -25,10 +25,9 @@ object Materialization {
       r => Variable(r.getInt(0), r.getBoolean(1), r.getDouble(2), r.getInt(3).toShort, r.getInt(5))
     }
   }
-  def clean_factors(base_dir: String): Dataset[Factor] = {
-    val fdf = spark.read.format("com.databricks.spark.csv").option("delimiter", "\t").option("inferSchema", "true")
-      .load("/" + base_dir + "/factors").withColumn("id", monotonically_increasing_id() + 10)
-    fdf.map {
+  def clean_factors(base_dir: String, weights: Dataset[Weight]): Dataset[Factor] = {
+    val fdf = spark.read.format("com.databricks.spark.csv").option("delimiter", "\t").option("inferSchema", "true").load("/" + base_dir + "/factors").withColumn("id", monotonically_increasing_id() + 10)
+    fdf.as("factors").join(weights.as("weights"), $"factors._c0" === $"weights.id").map{ //joins factor with weights
       r => {
         val s = r.size - 1
         var array: Array[(Long, Boolean)] = Array()
@@ -36,7 +35,7 @@ object Materialization {
         for (i <- str.indices by 2) {
           array = array :+ (str(i).toLong, str(i + 1).toBoolean)
         }
-        Factor(r.getLong(s), r.getInt(0), r.getInt(1).toShort, r.getInt(3), array, 0.5)
+        Factor(r.getLong(s-3), r.getInt(0), r.getInt(1).toShort, r.getInt(3), array, r.getDouble(s))
       }
     }
   }
@@ -68,13 +67,17 @@ object Materialization {
 
   }
   // Q
-  def compute_q(vcc:Dataset[VQ],A:Dataset[VariableAssignment]):Dataset[Q] = {
-    vcc.as("VQ").join(A.as("A"), $"VQ.variable2_id" === $"A.variable_id").select("VQ.*", "A.value").
-      toDF("variable_id", "isEvidence", "variable_initial_value", "factor_id", "func", "weight", "weight_id", "factor_variables", "variable2_id",
-        "variable2_isEvidence", "variable2_initial_value", "value").as[Q].cache
+
+  def compute_QGrouped(q:Dataset[VQ]):Dataset[QGroup]= {
+    q.groupBy("variable_id").agg(collect_set(struct("factor_id","func","weight","weight_id","factor_variables")).as("factors")).as[QGroup]
   }
-  def compute_QGrouped(q:Dataset[Q]):Dataset[QGroup]= {
-    q.groupBy("variable_id").agg(collect_set(struct("factor_id","func","weight","weight_id","factor_variables")).as("factors")
-      ,collect_set(struct("variable2_id", "variable2_isEvidence", "value")).as("variables")).as[QGroup]
-  }
+//  def compute_q(vcc:Dataset[VQ],A:Dataset[VariableAssignment]):Dataset[Q] = {
+//    vcc.as("VQ").join(A.as("A"), $"VQ.variable2_id" === $"A.variable_id").select("VQ.*", "A.value").
+//      toDF("variable_id", "isEvidence", "variable_initial_value", "factor_id", "func", "weight", "weight_id", "factor_variables", "variable2_id",
+//        "variable2_isEvidence", "variable2_initial_value", "value").as[Q].cache
+//  }
+//  def compute_QGrouped(q:Dataset[Q]):Dataset[QGroup]= {
+//    q.groupBy("variable_id").agg(collect_set(struct("factor_id","func","weight","weight_id","factor_variables")).as("factors")
+//      ,collect_set(struct("variable2_id", "variable2_isEvidence", "value")).as("variables")).as[QGroup]
+//  }
 }
