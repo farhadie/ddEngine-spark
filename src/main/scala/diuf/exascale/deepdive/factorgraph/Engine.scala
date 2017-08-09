@@ -23,7 +23,7 @@ object Engine {
     val burnout = args(2).toInt
     val thin = args(3).toInt
     //    inputs
-    val hadoop_dir = "home/sam/thesis/gibbs/smoke/2v"//args(0)
+    val hadoop_dir = args(0) //"home/sam/thesis/gibbs/smoke/2v"
     val weights: Dataset[Weight] = clean_weights(hadoop_dir)
     val variables: Dataset[Variable] = clean_variables(hadoop_dir)
     val factors: Dataset[Factor] = clean_factors(hadoop_dir, weights)
@@ -32,7 +32,7 @@ object Engine {
 
     if(materialization_stat(factors, variables)){
       val sample_worlds = Sampler.gibbs(vcc(E),A, iterations)
-      //val output = infer(sample_worlds, factors, iterations, burnout, thin)
+      val output = infer(sample_worlds, factors, iterations, burnout, thin)
     }else {
     }
   val t1 = System.nanoTime()

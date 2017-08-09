@@ -10,14 +10,29 @@ import org.apache.spark.sql.{DataFrame, Dataset}
 import scala.collection.Map
 
 object Inference {
-  import Engine.spark
   import Engine.spark.implicits._
-  def infer(sample_worlds: DataFrame, factor: Dataset[Factor], iterations: Int, burnout: Int, thin: Int): Unit = {
-    for (i <- 0 until iterations) {
+  def infer(sample_worlds: DataFrame, factors: Dataset[Factor], iterations: Int, burnout: Int, thin: Int): Unit = {
+    var list_of_pr = Array.empty[Double]
+    var sum = 0.0
+    for (i <- burnout until iterations by thin) {
       val col = "sw" + i
-      val values = sample_worlds.select("variable_id", col).rdd
-
+      val values = sample_worlds.select("variable_id", col).rdd.map(r => (r.getLong(0),r.getDouble(1)))
+      val probability = pr_I(factors,values)
+      list_of_pr  = list_of_pr :+ probability
+      sum += probability
     }
+    val results = sample_worlds.map {
+      variable => {
+        var prob_v = 0.0
+        var j = 0
+        for(i<- burnout until iterations by thin){
+          prob_v += variable.getDouble(i)*list_of_pr(j)/sum
+          j += 1
+        }
+        (variable.getLong(0), prob_v)
+      }
+    }
+    results.show
   }
 
   def pr_I(factor: Dataset[Factor], values: RDD[(Long, Double)]): Double = {
