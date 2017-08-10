@@ -42,7 +42,7 @@ object Sampler {
          a = if (A.getOrElse(function_arguments(0)._1.toLong, Double).asInstanceOf[Double] == 1) true else false
        }
 
-       if (!a || b) 1 else 0
+       if (!a || b) 1 else 0 //TODO check this
     }
   }
   def sample(variable_id:Long, factors:Array[(Long,Short,Double,Long,Array[(Long, Boolean)])], AMap: Map[Long, Double]):Double = {
@@ -64,11 +64,10 @@ object Sampler {
   }
   def gibbs(vcc:Dataset[VQ], A:RDD[(Long,Double)], iterations:Int):DataFrame = {
     //var q = compute_q(vcc, A)
-    var adf = A.toDF("variable_id","sw0")
+    var adf = A.toDF("variable_id","sw0").cache
     var AMap = A.collectAsMap
     val q_grouped = compute_QGrouped(vcc)
     for(i <- 1 to iterations) {
-      println(AMap)
       val new_A: Map[Long, Double] = q_grouped.map{
         r => {
           val x = sample(r.variable_id, r.factors,AMap)
@@ -76,8 +75,9 @@ object Sampler {
         }
       }.collect().toMap
       AMap = new_A
+      println(AMap)
       val new_adf = spark.sparkContext.parallelize(AMap.toList).toDF("variable_id","new_value")
-      adf = adf.as("A").join(new_adf.as("new_adf"), $"A.variable_id" === $"new_adf.variable_id").select("A.*","new_adf.new_value").withColumnRenamed("new_value", "sw"+i.toString)
+      adf = adf.as("A").join(new_adf.as("new_adf"), $"A.variable_id" === $"new_adf.variable_id").select("A.*","new_adf.new_value").withColumnRenamed("new_value", "sw"+i.toString).cache // TODO join once
     }
     adf.cache
   }

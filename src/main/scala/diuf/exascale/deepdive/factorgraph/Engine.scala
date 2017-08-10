@@ -32,6 +32,7 @@ object Engine {
 
     if(materialization_stat(factors, variables)){
       val sample_worlds = Sampler.gibbs(vcc(E),A, iterations)
+
       val output = infer(sample_worlds, factors, iterations, burnout, thin)
     }else {
     }
