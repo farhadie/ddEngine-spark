@@ -64,21 +64,29 @@ object Sampler {
   }
   def gibbs(vcc:Dataset[VQ], A:RDD[(Long,Double)], iterations:Int):DataFrame = {
     //var q = compute_q(vcc, A)
-    var adf = A.toDF("variable_id","sw0").cache
-    var AMap = A.collectAsMap
+    var adf = A.toDF("variable_id","sw0")
+    var AMap = spark.sparkContext.broadcast(A.collectAsMap)
+    var list_of_pw: Array[Array[(Long, Double)]] = Array(A.collect)
     val q_grouped = compute_QGrouped(vcc)
     for(i <- 1 to iterations) {
-      val new_A: Map[Long, Double] = q_grouped.map{
-        r => {
-          val x = sample(r.variable_id, r.factors,AMap)
-          (r.variable_id, x)
+      val new_A:Dataset[(Long, Double)]= q_grouped.mapPartitions{
+        q => {
+          val list = q.toList
+          list.map{
+            r => {
+              val x = sample(r.variable_id, r.factors,AMap.value)
+              AMap.value.updated(r.variable_id, x)
+              (r.variable_id, x)
+            }
+          }.iterator
         }
-      }.collect().toMap
-      AMap = new_A
-      println(AMap)
-      val new_adf = spark.sparkContext.parallelize(AMap.toList).toDF("variable_id","new_value")
-      adf = adf.as("A").join(new_adf.as("new_adf"), $"A.variable_id" === $"new_adf.variable_id").select("A.*","new_adf.new_value").withColumnRenamed("new_value", "sw"+i.toString).cache // TODO join once
+      }
+      val x = new_A.rdd.collectAsMap
+      AMap = spark.sparkContext.broadcast(x)
+      list_of_pw = list_of_pw :+ x.toArray
+      adf = adf.as("A").join(new_A.as("new_adf"), $"A.variable_id" === $"new_adf._1").select("A.*","new_adf._2").withColumnRenamed("_2", "sw"+i.toString).cache // TODO join once
+      adf.cache
     }
-    adf.cache
+    adf
   }
 }
