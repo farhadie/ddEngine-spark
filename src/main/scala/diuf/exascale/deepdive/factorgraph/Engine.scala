@@ -32,8 +32,8 @@ object Engine {
 
     if(materialization_stat(factors, variables)){
       val sample_worlds = Sampler.gibbs(vcc(E),A, iterations)
-
-      val output = infer(sample_worlds, factors, iterations, burnout, thin)
+      val factor_weighted: Dataset[Factor] = Learning.learn_weights(sample_worlds, factors, weights,iterations)
+      val output = infer(sample_worlds, factor_weighted, iterations, burnout, thin)
     }else {
     }
   val t1 = System.nanoTime()
